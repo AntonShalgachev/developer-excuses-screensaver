@@ -160,12 +160,17 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClInclude Include="DeveloperExcusesScreensaver.h" />
+    <ClInclude Include="Drawer.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="QuoteSource.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="tstring.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DeveloperExcusesScreensaver.cpp" />
+    <ClCompile Include="Drawer.cpp" />
+    <ClCompile Include="QuoteSource.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="DeveloperExcusesScreensaver.rc" />

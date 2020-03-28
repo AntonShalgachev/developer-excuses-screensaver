@@ -12,10 +12,5 @@
 #include <commctrl.h>
 #include <scrnsave.h>
 #include <cmath>
-#include <string>
-
-#ifdef _UNICODE
-using tstring = std::wstring;
-#else
-using tstring = std::string;
-#endif
+#include <memory>
+#include "tstring.h"
