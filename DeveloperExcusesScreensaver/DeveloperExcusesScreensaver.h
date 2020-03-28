@@ -1,3 +1,7 @@
 #pragma once
 
-#include "resource.h"
+#ifdef UNICODE
+#pragma comment(lib, "scrnsavw.lib")
+#else
+#pragma comment(lib, "scrnsave.lib")
+#endif

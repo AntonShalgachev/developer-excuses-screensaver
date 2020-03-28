@@ -1,180 +1,172 @@
 // DeveloperExcusesScreensaver.cpp : Defines the entry point for the application.
 //
 
-#include "framework.h"
 #include "DeveloperExcusesScreensaver.h"
+#include "framework.h"
+#include "resource.h"
 
-#define MAX_LOADSTRING 100
-
-// Global Variables:
-HINSTANCE hInst;                                // current instance
-WCHAR szTitle[MAX_LOADSTRING];                  // The title bar text
-WCHAR szWindowClass[MAX_LOADSTRING];            // the main window class name
-
-// Forward declarations of functions included in this code module:
-ATOM                MyRegisterClass(HINSTANCE hInstance);
-BOOL                InitInstance(HINSTANCE, int);
-LRESULT CALLBACK    WndProc(HWND, UINT, WPARAM, LPARAM);
-INT_PTR CALLBACK    About(HWND, UINT, WPARAM, LPARAM);
-
-int APIENTRY wWinMain(_In_ HINSTANCE hInstance,
-                     _In_opt_ HINSTANCE hPrevInstance,
-                     _In_ LPWSTR    lpCmdLine,
-                     _In_ int       nCmdShow)
+namespace
 {
-    UNREFERENCED_PARAMETER(hPrevInstance);
-    UNREFERENCED_PARAMETER(lpCmdLine);
+	static HDC g_hDC = nullptr;
+	static HBITMAP g_hBmp = nullptr;
+	static HFONT g_quoteFont = nullptr;
 
-    // TODO: Place code here.
+	static SIZE g_screenSize;
 
-    // Initialize global strings
-    LoadStringW(hInstance, IDS_APP_TITLE, szTitle, MAX_LOADSTRING);
-    LoadStringW(hInstance, IDC_DEVELOPEREXCUSESSCREENSAVER, szWindowClass, MAX_LOADSTRING);
-    MyRegisterClass(hInstance);
+	static const int s_updateTimerId = 1;
 
-    // Perform application initialization:
-    if (!InitInstance (hInstance, nCmdShow))
-    {
-        return FALSE;
-    }
+	void UpdateFrame(HWND hWnd);
 
-    HACCEL hAccelTable = LoadAccelerators(hInstance, MAKEINTRESOURCE(IDC_DEVELOPEREXCUSESSCREENSAVER));
+	void Init(HWND hWnd)
+	{
+		//LoadConfiguration();
+		RECT screenRect;
+		GetClientRect(hWnd, &screenRect);
 
-    MSG msg;
+		g_screenSize.cy = screenRect.bottom - screenRect.top;
+		g_screenSize.cx = screenRect.right - screenRect.left;
 
-    // Main message loop:
-    while (GetMessage(&msg, nullptr, 0, 0))
-    {
-        if (!TranslateAccelerator(msg.hwnd, hAccelTable, &msg))
-        {
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-    }
+		HDC hDc = GetDC(hWnd);
+		g_hBmp = CreateCompatibleBitmap(hDc, g_screenSize.cx, g_screenSize.cy);
+		g_hDC = CreateCompatibleDC(hDc);
+		ReleaseDC(hWnd, hDc);
+		SelectObject(g_hDC, g_hBmp);
 
-    return (int) msg.wParam;
+		SetTextColor(g_hDC, RGB(255, 255, 255));
+		SetBkMode(g_hDC, TRANSPARENT);
+
+		{
+			LOGFONT lf;
+			ZeroMemory(&lf, sizeof(lf));
+			wcscpy_s(lf.lfFaceName, TEXT("Consolas"));
+			lf.lfQuality = ANTIALIASED_QUALITY;
+			lf.lfHeight = g_screenSize.cy / 25;
+
+			g_quoteFont = CreateFontIndirect(&lf);
+
+			SelectObject(g_hDC, g_quoteFont);
+		}
+
+		SetTimer(hWnd, s_updateTimerId, 1000, nullptr);
+		UpdateFrame(hWnd);
+	}
+
+	void UpdateFrame(HWND hWnd)
+	{
+		RECT screenRect;
+		GetClientRect(hWnd, &screenRect);
+
+		HBRUSH brush = CreateSolidBrush(RGB(0, 0, 0));
+		FillRect(g_hDC, &screenRect, brush);
+
+		{
+			auto quoteText = tstring(TEXT("Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote Test Quote"));
+			auto quoteLength = static_cast<int>(quoteText.length());
+
+			auto textRect = screenRect;
+			DrawText(g_hDC, quoteText.c_str(), quoteLength, &textRect, DT_CENTER | DT_NOCLIP | DT_WORDBREAK | DT_EXTERNALLEADING | DT_CALCRECT);
+
+			auto textWidth = textRect.right - textRect.left;
+			auto textHeight = textRect.bottom - textRect.top;
+			auto offsetX = (g_screenSize.cx - textWidth) / 2;
+			auto offsetY = (g_screenSize.cy - textHeight) / 2;
+			textRect.left += offsetX;
+			textRect.right += offsetX;
+			textRect.bottom += offsetY;
+			textRect.top += offsetY;
+			DrawText(g_hDC, quoteText.c_str(), quoteLength, &textRect, DT_CENTER | DT_NOCLIP | DT_WORDBREAK | DT_EXTERNALLEADING);
+
+			FrameRect(g_hDC, &textRect, CreateSolidBrush(RGB(255, 0, 0)));
+		}
+
+		InvalidateRect(hWnd, &screenRect, false);
+	}
 }
 
-
-
-//
-//  FUNCTION: MyRegisterClass()
-//
-//  PURPOSE: Registers the window class.
-//
-ATOM MyRegisterClass(HINSTANCE hInstance)
+LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
-    WNDCLASSEXW wcex;
+	switch (message)
+	{
+		case WM_CREATE:
+		{
+			Init(hWnd);
+			break;
+		}
+		case WM_DESTROY:
+		{
+			KillTimer(hWnd, s_updateTimerId);
+			ReleaseDC(hWnd, g_hDC);
+			DeleteObject(g_hDC);
+			DeleteObject(g_hBmp);
+			DeleteObject(g_quoteFont);
+			break;
+		}
+		case WM_PAINT:
+		{
+			PAINTSTRUCT ps;
+			HDC hdc = BeginPaint(hWnd, &ps);
+			BitBlt(hdc, 0, 0, g_screenSize.cx, g_screenSize.cy, g_hDC, 0, 0, SRCCOPY);
+			EndPaint(hWnd, &ps);
+			return 0;
+			break;
+		}
+		case WM_TIMER:
+		{
+			if (wParam == s_updateTimerId)
+				UpdateFrame(hWnd);
+			break;
+		}
+	}
 
-    wcex.cbSize = sizeof(WNDCLASSEX);
-
-    wcex.style          = CS_HREDRAW | CS_VREDRAW;
-    wcex.lpfnWndProc    = WndProc;
-    wcex.cbClsExtra     = 0;
-    wcex.cbWndExtra     = 0;
-    wcex.hInstance      = hInstance;
-    wcex.hIcon          = LoadIcon(hInstance, MAKEINTRESOURCE(IDI_DEVELOPEREXCUSESSCREENSAVER));
-    wcex.hCursor        = LoadCursor(nullptr, IDC_ARROW);
-    wcex.hbrBackground  = (HBRUSH)(COLOR_WINDOW+1);
-    wcex.lpszMenuName   = MAKEINTRESOURCEW(IDC_DEVELOPEREXCUSESSCREENSAVER);
-    wcex.lpszClassName  = szWindowClass;
-    wcex.hIconSm        = LoadIcon(wcex.hInstance, MAKEINTRESOURCE(IDI_SMALL));
-
-    return RegisterClassExW(&wcex);
+	return DefScreenSaverProc(hWnd, message, wParam, lParam);
 }
 
-//
-//   FUNCTION: InitInstance(HINSTANCE, int)
-//
-//   PURPOSE: Saves instance handle and creates main window
-//
-//   COMMENTS:
-//
-//        In this function, we save the instance handle in a global variable and
-//        create and display the main program window.
-//
-BOOL InitInstance(HINSTANCE hInstance, int nCmdShow)
+BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
 {
-   hInst = hInstance; // Store instance handle in our global variable
+	switch (message)
+	{
+		case WM_INITDIALOG:
+		{
+			//LoadConfiguration();
+			//CheckDlgButton(hDlg, IDC_24HOUR_CHECK, g_is24Hour);
+			//CheckDlgButton(hDlg, IDC_ANIMATEHANDS_CHECK, g_AnimatedClockHands);
+			return TRUE;
+		}
+		case WM_COMMAND:
+		{
+			switch (LOWORD(wParam))
+			{
+			case IDOK:
+			{
+				//TCHAR szBuffer[8];
 
-   HWND hWnd = CreateWindowW(szWindowClass, szTitle, WS_OVERLAPPEDWINDOW,
-      CW_USEDEFAULT, 0, CW_USEDEFAULT, 0, nullptr, nullptr, hInstance, nullptr);
+				//g_is24Hour = IsDlgButtonChecked(hDlg, IDC_24HOUR_CHECK);
+				//_itow_s(g_is24Hour, szBuffer, 10);
+				//WritePrivateProfileString(szAppName, szFormatOptionName, szBuffer, szIniFile);
 
-   if (!hWnd)
-   {
-      return FALSE;
-   }
+				//g_AnimatedClockHands = IsDlgButtonChecked(hDlg, IDC_ANIMATEHANDS_CHECK);
+				//_itow_s(g_AnimatedClockHands, szBuffer, 10);
+				//WritePrivateProfileString(szAppName, szClockHandOptionName, szBuffer, szIniFile);
+			}
+			case IDCANCEL:
+			{
+				EndDialog(hDlg, LOWORD(wParam) == IDOK);
+				return TRUE;
+			}
+			}
+			break;
+		}
+		case WM_CLOSE:
+		{
+			EndDialog(hDlg, FALSE);
+			return TRUE;
+		}
+	}
 
-   ShowWindow(hWnd, nCmdShow);
-   UpdateWindow(hWnd);
-
-   return TRUE;
+	return FALSE;
 }
 
-//
-//  FUNCTION: WndProc(HWND, UINT, WPARAM, LPARAM)
-//
-//  PURPOSE: Processes messages for the main window.
-//
-//  WM_COMMAND  - process the application menu
-//  WM_PAINT    - Paint the main window
-//  WM_DESTROY  - post a quit message and return
-//
-//
-LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
+BOOL WINAPI RegisterDialogClasses(HANDLE)
 {
-    switch (message)
-    {
-    case WM_COMMAND:
-        {
-            int wmId = LOWORD(wParam);
-            // Parse the menu selections:
-            switch (wmId)
-            {
-            case IDM_ABOUT:
-                DialogBox(hInst, MAKEINTRESOURCE(IDD_ABOUTBOX), hWnd, About);
-                break;
-            case IDM_EXIT:
-                DestroyWindow(hWnd);
-                break;
-            default:
-                return DefWindowProc(hWnd, message, wParam, lParam);
-            }
-        }
-        break;
-    case WM_PAINT:
-        {
-            PAINTSTRUCT ps;
-            HDC hdc = BeginPaint(hWnd, &ps);
-            // TODO: Add any drawing code that uses hdc here...
-            EndPaint(hWnd, &ps);
-        }
-        break;
-    case WM_DESTROY:
-        PostQuitMessage(0);
-        break;
-    default:
-        return DefWindowProc(hWnd, message, wParam, lParam);
-    }
-    return 0;
-}
-
-// Message handler for about box.
-INT_PTR CALLBACK About(HWND hDlg, UINT message, WPARAM wParam, LPARAM lParam)
-{
-    UNREFERENCED_PARAMETER(lParam);
-    switch (message)
-    {
-    case WM_INITDIALOG:
-        return (INT_PTR)TRUE;
-
-    case WM_COMMAND:
-        if (LOWORD(wParam) == IDOK || LOWORD(wParam) == IDCANCEL)
-        {
-            EndDialog(hDlg, LOWORD(wParam));
-            return (INT_PTR)TRUE;
-        }
-        break;
-    }
-    return (INT_PTR)FALSE;
+	return TRUE;
 }
