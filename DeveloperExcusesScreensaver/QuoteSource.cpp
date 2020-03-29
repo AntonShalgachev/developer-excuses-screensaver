@@ -1,16 +1,33 @@
 #include "QuoteSource.h"
 #include "framework.h"
 
-void QuoteSource::fetchQuote(std::function<void(tstring)> onQuoteAvailable)
+namespace
 {
-	auto text = tstring(TEXT("Some quote"));
-	auto part = tstring(TEXT(" some quote"));
-	for (auto i = 0; i < m_count; i++)
+	const auto url = tstring(TEXT("http://developerexcuses.com/"));
+
+	const auto regex = tregex(TEXT("<a href=\"/\" rel=\"nofollow\" style=\"text-decoration: none; color: #333;\">(.+)</a>"));
+
+	tstring findQuote(const tstring& html)
 	{
-		text += part;
+		std::wsmatch match;
+		
+		while (std::regex_search(html, match, regex))
+		{
+			if (match.size() < 2)
+				continue;
+			return match[1];
+		}
+
+		return TEXT("");
 	}
+}
 
-	onQuoteAvailable(text);
+void QuoteSource::fetchQuote(OnDataAvailableCallback&& onQuoteAvailable)
+{
+	if (m_downloader.isInProgress())
+		return;
 
-	m_count++;
+	m_downloader.download(url, [onQuoteAvailable = std::forward<OnDataAvailableCallback>(onQuoteAvailable)](const tstring& result) {
+		onQuoteAvailable(findQuote(result));
+	});
 }

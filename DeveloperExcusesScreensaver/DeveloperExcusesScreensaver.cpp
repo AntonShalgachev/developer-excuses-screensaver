@@ -11,7 +11,12 @@ namespace
 	std::unique_ptr<QuoteSource> quoteSource = nullptr;
 	std::unique_ptr<Drawer> drawer = nullptr;
 
-	static const int s_updateTimerId = 1;
+	// TODO extract to config dialog
+	const int updateTimerPeriod = 5000;
+	const int fontSize = 43;
+
+	const bool debugDraw = false;
+	const int updateTimerId = 1;
 
 	void fetchNewQuote()
 	{
@@ -26,23 +31,25 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	switch (message)
 	{
 		case WM_CREATE:
-			drawer = std::make_unique<Drawer>(hWnd);
+			drawer = std::make_unique<Drawer>(hWnd, fontSize);
 			quoteSource = std::make_unique<QuoteSource>();
 
-			SetTimer(hWnd, s_updateTimerId, 1000, nullptr);
+			drawer->setDebugDraw(debugDraw);
+
+			SetTimer(hWnd, updateTimerId, updateTimerPeriod, nullptr);
 			fetchNewQuote();
 
 			break;
 		case WM_DESTROY:
 			drawer = nullptr;
 			quoteSource = nullptr;
-			KillTimer(hWnd, s_updateTimerId);
+			KillTimer(hWnd, updateTimerId);
 			break;
 		case WM_PAINT:
 			drawer->paint();
 			break;
 		case WM_TIMER:
-			if (wParam == s_updateTimerId)
+			if (wParam == updateTimerId)
 				fetchNewQuote();
 			break;
 	}

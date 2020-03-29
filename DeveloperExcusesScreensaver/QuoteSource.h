@@ -1,14 +1,15 @@
 #pragma once
 
-#include <functional>
-#include "tstring.h"
+#include "framework.h"
+#include "UrlDownloader.h"
 
 class QuoteSource
 {
 public:
-	void fetchQuote(std::function<void(tstring)> onQuoteAvailable);
+	using OnDataAvailableCallback = std::function<void(tstring)>;
+	void fetchQuote(OnDataAvailableCallback&& onQuoteAvailable);
 
 private:
-	int m_count = 0;
+	UrlDownloader m_downloader;
 };
 

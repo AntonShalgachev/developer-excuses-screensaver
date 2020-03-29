@@ -5,10 +5,12 @@
 class Drawer
 {
 public:
-	Drawer(HWND hwnd);
+	Drawer(HWND hwnd, int fontSize);
 	~Drawer();
-	void paint();
+	void paint() const;
 	void setText(const tstring& text);
+
+	void setDebugDraw(bool debugDraw) { m_debugDraw = debugDraw; }
 
 private:
 	HWND m_hwnd = 0;
@@ -17,5 +19,7 @@ private:
 	HFONT m_font = 0;
 
 	SIZE g_screenSize = {0, 0};
+
+	bool m_debugDraw = false;
 };
 
