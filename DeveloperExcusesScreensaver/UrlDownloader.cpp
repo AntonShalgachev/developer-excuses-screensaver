@@ -1,8 +1,9 @@
 #include "UrlDownloader.h"
 
-void UrlDownloader::download(const tstring& url, OnDataAvailableCallback&& onDataAvailable)
+void UrlDownloader::download(const tstring& url, OnDataAvailableCallback&& onDataAvailable, OnErrorCallback&& onError)
 {
 	m_onDataAvailable = onDataAvailable;
+	m_onError = onError;
 	m_inProgress = true;
 
 	DeleteUrlCacheEntry(url.c_str());
@@ -27,5 +28,11 @@ void UrlDownloader::onDownloadComplete(IStream* stream, DWORD length)
 		m_onDataAvailable(convert_to_tstring(std::string{ buffer.get(), length }));
 
 	m_onDataAvailable = {};
-	m_inProgress = false;
+}
+
+void UrlDownloader::onDownloadError()
+{
+	if (m_onError)
+		m_onError();
+	m_onError = {};
 }

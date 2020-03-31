@@ -21,3 +21,4 @@
 #include <functional>
 #include "wininet.h"
 #include "Shlobj.h"
+#include <random>
