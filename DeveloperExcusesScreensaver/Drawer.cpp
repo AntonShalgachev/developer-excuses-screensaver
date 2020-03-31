@@ -3,24 +3,13 @@
 
 namespace
 {
-	HFONT CreateQuoteFont(const tstring& fontName, LONG height)
-	{
-		LOGFONT fontInfo;
-		ZeroMemory(&fontInfo, sizeof(fontInfo));
-		wcscpy_s(fontInfo.lfFaceName, fontName.c_str());
-		fontInfo.lfQuality = ANTIALIASED_QUALITY;
-		fontInfo.lfHeight = height;
-
-		return CreateFontIndirect(&fontInfo);
-	}
-
 	const auto referenceHeight = 1080;
 	const auto textColor = RGB(255, 255, 255);
 	const auto backgroundBrush = CreateSolidBrush(RGB(0, 0, 0));
 	const auto outlineBrush = CreateSolidBrush(RGB(255, 0, 0));
 }
 
-Drawer::Drawer(HWND hwnd, int fontSize) : m_hwnd(hwnd)
+Drawer::Drawer(HWND hwnd, LOGFONT fontInfo) : m_hwnd(hwnd)
 {
 	RECT screenRect;
 	GetClientRect(m_hwnd, &screenRect);
@@ -37,7 +26,9 @@ Drawer::Drawer(HWND hwnd, int fontSize) : m_hwnd(hwnd)
 	SetTextColor(m_dc, textColor);
 	SetBkMode(m_dc, TRANSPARENT);
 
-	m_font = CreateQuoteFont(TEXT("Consolas"), fontSize * g_screenSize.cy / referenceHeight);
+	fontInfo.lfHeight = fontInfo.lfHeight * g_screenSize.cy / referenceHeight;
+
+	m_font = CreateFontIndirect(&fontInfo);
 	SelectObject(m_dc, m_font);
 }
 

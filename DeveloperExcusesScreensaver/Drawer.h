@@ -5,7 +5,7 @@
 class Drawer
 {
 public:
-	Drawer(HWND hwnd, int fontSize);
+	Drawer(HWND hwnd, LOGFONT fontInfo);
 	~Drawer();
 	void paint() const;
 	void setText(const tstring& text);

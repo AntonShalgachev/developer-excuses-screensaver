@@ -15,7 +15,9 @@
 #include <vector>
 #include <memory>
 #include "tstring.h"
+#include <fstream>
 #include <atlbase.h>
 #include <sstream>
 #include <functional>
 #include "wininet.h"
+#include "Shlobj.h"

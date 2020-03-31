@@ -5,15 +5,18 @@
 #include "framework.h"
 #include "Drawer.h"
 #include "QuoteSource.h"
+#include "ConfigurationManager.h"
+#include "resource.h"
 
 namespace
 {
 	std::unique_ptr<QuoteSource> quoteSource = nullptr;
 	std::unique_ptr<Drawer> drawer = nullptr;
 
-	// TODO extract to config dialog
-	const int updateTimerPeriod = 5000;
-	const int fontSize = 43;
+	// default values
+	const auto updateTimerPeriod = 5000;
+	const auto fontSize = 43;
+	const auto fontName = TEXT("Consolas");
 
 	const bool debugDraw = false;
 	const int updateTimerId = 1;
@@ -24,6 +27,38 @@ namespace
 			drawer->setText(text);
 		});
 	}
+
+	std::vector<unsigned char> serializeFontDescription(const LOGFONT& logFont)
+	{
+		auto dataSize = sizeof(logFont);
+
+		std::vector<unsigned char> fontData;
+		fontData.resize(dataSize);
+		CopyMemory(fontData.data(), &logFont, dataSize);
+
+		return fontData;
+	}
+
+	LOGFONT deserializeFontDescription(const std::vector<unsigned char>& serializedFontDescription)
+	{
+		LOGFONT logFont;
+		CopyMemory(&logFont, serializedFontDescription.data(), sizeof(logFont));
+		return logFont;
+	}
+
+	std::vector<unsigned char> getDefaultFontData()
+	{
+		LOGFONT logFont;
+
+		ZeroMemory(&logFont, sizeof(logFont));
+		wcscpy_s(logFont.lfFaceName, fontName);
+		logFont.lfQuality = ANTIALIASED_QUALITY;
+		logFont.lfHeight = fontSize;
+
+		return serializeFontDescription(logFont);
+	}
+
+	ConfigurationManager configManager({ updateTimerPeriod, getDefaultFontData() });
 }
 
 LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -31,12 +66,15 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	switch (message)
 	{
 		case WM_CREATE:
-			drawer = std::make_unique<Drawer>(hWnd, fontSize);
+			//SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 1920, 1080, 0);
+			//SetWindowLong(hWnd, GWL_EXSTYLE, 0);
+
+			drawer = std::make_unique<Drawer>(hWnd, deserializeFontDescription(configManager.getConfiguration().fontData));
 			quoteSource = std::make_unique<QuoteSource>();
 
 			drawer->setDebugDraw(debugDraw);
 
-			SetTimer(hWnd, updateTimerId, updateTimerPeriod, nullptr);
+			SetTimer(hWnd, updateTimerId, configManager.getConfiguration().timerPeriod, nullptr);
 			fetchNewQuote();
 
 			break;
@@ -52,6 +90,15 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			if (wParam == updateTimerId)
 				fetchNewQuote();
 			break;
+
+		//case WM_ACTIVATEAPP:
+		//case WM_MOUSEMOVE:
+		//case WM_LBUTTONDOWN:
+		//case WM_MBUTTONDOWN:
+		//case WM_RBUTTONDOWN:
+		//case WM_KEYDOWN:
+		//case WM_SYSKEYDOWN:
+		//	return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
 	return DefScreenSaverProc(hWnd, message, wParam, lParam);
@@ -63,9 +110,10 @@ BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, L
 	{
 		case WM_INITDIALOG:
 		{
-			//LoadConfiguration();
-			//CheckDlgButton(hDlg, IDC_24HOUR_CHECK, g_is24Hour);
-			//CheckDlgButton(hDlg, IDC_ANIMATEHANDS_CHECK, g_AnimatedClockHands);
+			auto timerPeriod = configManager.getConfiguration().timerPeriod;
+			auto timerPeriodText = to_tstring(timerPeriod); // string is null-terminated in C++11
+			SetDlgItemText(hDlg, IDC_TIMER_PERIOD_EDIT, timerPeriodText.c_str());
+
 			return TRUE;
 		}
 		case WM_COMMAND:
@@ -74,19 +122,38 @@ BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, L
 			{
 			case IDOK:
 			{
-				//TCHAR szBuffer[8];
+				auto timerPeriodEdit = GetDlgItem(hDlg, IDC_TIMER_PERIOD_EDIT);
+				auto timerPeriodStringLength = GetWindowTextLength(timerPeriodEdit);
+				auto timerPeriodString = std::vector<TCHAR>(timerPeriodStringLength + 1);
+				GetWindowText(timerPeriodEdit, timerPeriodString.data(), timerPeriodString.size());
+				auto timerPeriod = StrToInt(timerPeriodString.data());
 
-				//g_is24Hour = IsDlgButtonChecked(hDlg, IDC_24HOUR_CHECK);
-				//_itow_s(g_is24Hour, szBuffer, 10);
-				//WritePrivateProfileString(szAppName, szFormatOptionName, szBuffer, szIniFile);
+				configManager.getConfiguration().timerPeriod = timerPeriod;
+				configManager.save();
 
-				//g_AnimatedClockHands = IsDlgButtonChecked(hDlg, IDC_ANIMATEHANDS_CHECK);
-				//_itow_s(g_AnimatedClockHands, szBuffer, 10);
-				//WritePrivateProfileString(szAppName, szClockHandOptionName, szBuffer, szIniFile);
+				EndDialog(hDlg, LOWORD(wParam));
+				return TRUE;
 			}
 			case IDCANCEL:
 			{
-				EndDialog(hDlg, LOWORD(wParam) == IDOK);
+				EndDialog(hDlg, LOWORD(wParam));
+				return TRUE;
+			}
+			case IDC_CHOOSE_FONT:
+			{
+				auto logFont = deserializeFontDescription(configManager.getConfiguration().fontData);
+
+				CHOOSEFONT chooseFont;
+				ZeroMemory(&chooseFont, sizeof(chooseFont));
+				chooseFont.lStructSize = sizeof(chooseFont);
+				chooseFont.hwndOwner = hDlg;
+				chooseFont.lpLogFont = &logFont;
+				chooseFont.iPointSize = 120;
+				chooseFont.Flags = CF_BOTH | CF_EFFECTS | CF_FORCEFONTEXIST | CF_INITTOLOGFONTSTRUCT;
+				
+				ChooseFont(&chooseFont);
+				configManager.getConfiguration().fontData = serializeFontDescription(logFont);
+
 				return TRUE;
 			}
 			}

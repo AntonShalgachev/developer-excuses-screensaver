@@ -24,7 +24,7 @@ void UrlDownloader::onDownloadComplete(IStream* stream, DWORD length)
 	auto result = stream->Read(buffer.get(), length, &bytesRead);
 
 	if (m_onDataAvailable)
-		m_onDataAvailable(to_tstring(std::string{ buffer.get(), length }));
+		m_onDataAvailable(convert_to_tstring(std::string{ buffer.get(), length }));
 
 	m_onDataAvailable = {};
 	m_inProgress = false;
