@@ -66,9 +66,6 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	switch (message)
 	{
 		case WM_CREATE:
-			//SetWindowPos(hWnd, HWND_NOTOPMOST, 0, 0, 1920, 1080, 0);
-			//SetWindowLong(hWnd, GWL_EXSTYLE, 0);
-
 			drawer = std::make_unique<Drawer>(hWnd, deserializeFontDescription(configManager.getConfiguration().fontData));
 			quoteSource = std::make_unique<QuoteSource>();
 
@@ -90,15 +87,6 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 			if (wParam == updateTimerId)
 				fetchNewQuote();
 			break;
-
-		//case WM_ACTIVATEAPP:
-		//case WM_MOUSEMOVE:
-		//case WM_LBUTTONDOWN:
-		//case WM_MBUTTONDOWN:
-		//case WM_RBUTTONDOWN:
-		//case WM_KEYDOWN:
-		//case WM_SYSKEYDOWN:
-		//	return DefWindowProc(hWnd, message, wParam, lParam);
 	}
 
 	return DefScreenSaverProc(hWnd, message, wParam, lParam);
