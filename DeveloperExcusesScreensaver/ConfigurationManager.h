@@ -2,17 +2,16 @@
 
 #include "framework.h"
 
-struct Configuration
-{
-public:
-	int timerPeriod = 0;
-	//std::string fontData;
-	std::vector<unsigned char> fontData;
-};
-
 class ConfigurationManager
 {
 public:
+	struct Configuration
+	{
+	public:
+		int timerPeriod = 0;
+		std::vector<unsigned char> fontData;
+	};
+
 	ConfigurationManager(const Configuration& defaultConfig);
 
 	Configuration& getConfiguration() { return m_config; }

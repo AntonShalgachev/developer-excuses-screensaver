@@ -13,10 +13,9 @@ namespace
 	std::unique_ptr<QuoteSource> quoteSource = nullptr;
 	std::unique_ptr<Drawer> drawer = nullptr;
 
-	// default values
-	const auto updateTimerPeriod = 5000;
-	const auto fontSize = 43;
-	const auto fontName = TEXT("Consolas");
+	const auto defaultUpdatePeriod = 7000;
+	const auto defaultFontSize = 43;
+	const auto defaultFontName = TEXT("Courier New");
 
 	const bool debugDraw = false;
 	const int updateTimerId = 1;
@@ -51,14 +50,19 @@ namespace
 		LOGFONT logFont;
 
 		ZeroMemory(&logFont, sizeof(logFont));
-		wcscpy_s(logFont.lfFaceName, fontName);
+		wcscpy_s(logFont.lfFaceName, defaultFontName);
 		logFont.lfQuality = ANTIALIASED_QUALITY;
-		logFont.lfHeight = fontSize;
+		logFont.lfHeight = defaultFontSize;
 
 		return serializeFontDescription(logFont);
 	}
 
-	ConfigurationManager configManager({ updateTimerPeriod, getDefaultFontData() });
+	ConfigurationManager::Configuration getDefaultConfiguration()
+	{
+		return ConfigurationManager::Configuration{ defaultUpdatePeriod, getDefaultFontData() };
+	}
+
+	ConfigurationManager configManager{ getDefaultConfiguration() };
 }
 
 LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
