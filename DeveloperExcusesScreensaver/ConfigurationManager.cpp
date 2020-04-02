@@ -27,11 +27,12 @@ namespace
 
 	tstring encodeBase64(const std::vector<unsigned char>& binaryData)
 	{
+		auto binaryDataSize = static_cast<DWORD>(binaryData.size());
 		DWORD encodedDataLength = 0;
-		CryptBinaryToString(binaryData.data(), binaryData.size(), CRYPT_STRING_BASE64, nullptr, &encodedDataLength);
+		CryptBinaryToString(binaryData.data(), binaryDataSize, CRYPT_STRING_BASE64, nullptr, &encodedDataLength);
 		std::vector<TCHAR> encodedData;
 		encodedData.resize(encodedDataLength);
-		auto result = CryptBinaryToString(binaryData.data(), binaryData.size(), CRYPT_STRING_BASE64, encodedData.data(), &encodedDataLength);
+		auto result = CryptBinaryToString(binaryData.data(), binaryDataSize, CRYPT_STRING_BASE64, encodedData.data(), &encodedDataLength);
 
 		if (!result)
 		{
@@ -45,11 +46,12 @@ namespace
 
 	std::vector<unsigned char> decodeBase64(const tstring& encodedData)
 	{
+		auto encodedDataSize = static_cast<DWORD>(encodedData.size());
 		DWORD binaryDataLength = 0;
-		CryptStringToBinary(encodedData.data(), encodedData.size(), CRYPT_STRING_BASE64, nullptr, &binaryDataLength, nullptr, nullptr);
+		CryptStringToBinary(encodedData.data(), encodedDataSize, CRYPT_STRING_BASE64, nullptr, &binaryDataLength, nullptr, nullptr);
 		std::vector<unsigned char> binaryData;
 		binaryData.resize(binaryDataLength);
-		CryptStringToBinary(encodedData.data(), encodedData.size(), CRYPT_STRING_BASE64, binaryData.data(), &binaryDataLength, nullptr, nullptr);
+		CryptStringToBinary(encodedData.data(), encodedDataSize, CRYPT_STRING_BASE64, binaryData.data(), &binaryDataLength, nullptr, nullptr);
 
 		return binaryData;
 	}

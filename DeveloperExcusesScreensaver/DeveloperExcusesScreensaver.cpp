@@ -117,7 +117,7 @@ BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, L
 				auto timerPeriodEdit = GetDlgItem(hDlg, IDC_TIMER_PERIOD_EDIT);
 				auto timerPeriodStringLength = GetWindowTextLength(timerPeriodEdit);
 				auto timerPeriodString = std::vector<TCHAR>(timerPeriodStringLength + 1);
-				GetWindowText(timerPeriodEdit, timerPeriodString.data(), timerPeriodString.size());
+				GetWindowText(timerPeriodEdit, timerPeriodString.data(), static_cast<DWORD>(timerPeriodString.size()));
 				auto timerPeriod = StrToInt(timerPeriodString.data());
 
 				configManager.getConfiguration().timerPeriod = timerPeriod;
