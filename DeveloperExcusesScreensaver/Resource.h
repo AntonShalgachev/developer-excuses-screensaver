@@ -2,17 +2,13 @@
 // Microsoft Visual C++ generated include file.
 // Used by DeveloperExcusesScreensaver.rc
 //
-#define IDCANCEL2                       3
+#define IDS_DESCRIPTION                 1
 #define IDS_APP_TITLE                   103
-#define IDD_ABOUTBOX                    103
 #define IDM_ABOUT                       104
 #define IDM_EXIT                        105
 #define IDI_DEVELOPEREXCUSESSCREENSAVER 107
 #define IDI_SMALL                       108
 #define IDC_DEVELOPEREXCUSESSCREENSAVER 109
-#define IDR_MAINFRAME                   128
-#define IDC_EDIT1                       1001
-#define IDC_EDIT2                       1002
 #define IDC_TIMER_PERIOD_EDIT           1002
 #define IDC_CHOOSE_FONT                 1003
 #define DLG_SCRNSAVECONFIGURE           2003
