@@ -14,12 +14,14 @@ namespace
 	std::unique_ptr<QuoteSource> quoteSource = nullptr;
 	std::unique_ptr<Drawer> drawer = nullptr;
 
-	const auto defaultUpdatePeriod = 7000;
-	const auto defaultFontSize = 43;
-	const auto defaultFontName = TEXT("Courier New");
+	constexpr auto defaultUpdatePeriod = 7000;
+	constexpr auto defaultFontSize = 43;
+	constexpr auto defaultFontName = TEXT("Courier New");
 
-	const bool debugDraw = false;
-	const int updateTimerId = 1;
+	constexpr int updateTimerId = 1;
+
+	constexpr bool debugTextDraw = false;
+	constexpr bool debugBehaveLikeWindow = false;
 
 	void fetchNewQuote()
 	{
@@ -71,10 +73,26 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 	switch (message)
 	{
 		case WM_CREATE:
+			if constexpr (debugBehaveLikeWindow)
+			{
+				RECT r;
+				GetWindowRect(hWnd, &r);
+
+				auto width = r.right - r.left;
+				auto height = r.bottom - r.top;
+
+				// to make it non-topmost
+				SetWindowPos(hWnd, HWND_NOTOPMOST, r.left, r.top, width, height, 0);
+
+				// to make it visible in the taskbar
+				auto exStyle = GetWindowLong(hWnd, GWL_EXSTYLE);
+				SetWindowLong(hWnd, GWL_EXSTYLE, exStyle & ~WS_EX_TOOLWINDOW);
+			}
+
 			drawer = std::make_unique<Drawer>(hWnd, deserializeFontDescription(configManager.getConfiguration().fontData));
 			quoteSource = std::make_unique<QuoteSource>();
 
-			drawer->setDebugDraw(debugDraw);
+			drawer->setDebugDraw(debugTextDraw);
 
 			SetTimer(hWnd, updateTimerId, configManager.getConfiguration().timerPeriod, nullptr);
 			fetchNewQuote();
@@ -91,6 +109,17 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 		case WM_TIMER:
 			if (wParam == updateTimerId)
 				fetchNewQuote();
+			break;
+
+		case WM_ACTIVATEAPP:
+		case WM_MOUSEMOVE:
+		case WM_LBUTTONDOWN:
+		case WM_MBUTTONDOWN:
+		case WM_RBUTTONDOWN:
+		case WM_KEYDOWN:
+		case WM_SYSKEYDOWN:
+			if constexpr (debugBehaveLikeWindow)
+				return DefWindowProc(hWnd, message, wParam, lParam);
 			break;
 	}
 
