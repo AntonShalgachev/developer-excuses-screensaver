@@ -1,6 +1,7 @@
 #pragma once
 
 #include "framework.h"
+#include "tstring.h"
 
 class Drawer
 {
@@ -22,4 +23,3 @@ private:
 
 	bool m_debugDraw = false;
 };
-

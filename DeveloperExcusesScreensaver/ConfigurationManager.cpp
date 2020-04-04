@@ -2,6 +2,7 @@
 
 #include "framework.h"
 #include "nlohmann/json.hpp"
+#include "tstring.h"
 
 using json = nlohmann::json;
 

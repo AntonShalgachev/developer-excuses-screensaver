@@ -1,11 +1,12 @@
 #pragma once
 
 #include "framework.h"
+#include "tstring.h"
 
 class UrlDownloader : public IBindStatusCallback
 {
 public:
-	using OnDataAvailableCallback = std::function<void(tstring)>;
+	using OnDataAvailableCallback = std::function<void(const tstring&)>;
 	using OnErrorCallback = std::function<void()>;
 
 	void download(const tstring& url, OnDataAvailableCallback&& onDataAvailable, OnErrorCallback&& onError);

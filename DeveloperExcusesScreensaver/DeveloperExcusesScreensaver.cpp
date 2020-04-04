@@ -7,6 +7,7 @@
 #include "QuoteSource.h"
 #include "ConfigurationManager.h"
 #include "resource.h"
+#include "tstring.h"
 
 namespace
 {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-#include <codecvt>
+#include <Windows.h>
 #include <regex>
 
 #ifdef _UNICODE
@@ -9,13 +9,25 @@ using tstring = std::wstring;
 using tregex = std::wregex;
 inline tstring convert_to_tstring(const std::string& str)
 {
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-	return converter.from_bytes(str);
+	if (str.empty())
+		return {};
+
+	auto sourceSize = static_cast<int>(str.size());
+	auto targetSize = MultiByteToWideChar(CP_UTF8, 0, str.data(), sourceSize, nullptr, 0);
+	auto result = tstring(targetSize, TEXT('\0'));
+	MultiByteToWideChar(CP_UTF8, 0, str.data(), sourceSize, result.data(), targetSize);
+	return result;
 }
 inline std::string convert_to_string(const tstring& str)
 {
-	std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
-	return converter.to_bytes(str);
+	if (str.empty())
+		return {};
+
+	auto sourceSize = static_cast<int>(str.size());
+	auto targetSize = WideCharToMultiByte(CP_UTF8, 0, str.data(), sourceSize, nullptr, 0, nullptr, nullptr);
+	auto result = std::string(targetSize, '\0');
+	WideCharToMultiByte(CP_UTF8, 0, str.data(), sourceSize, result.data(), targetSize, nullptr, nullptr);
+	return result;
 }
 template<typename T>
 inline tstring to_tstring(T val)
