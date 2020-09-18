@@ -9,72 +9,75 @@ namespace
 	const auto outlineBrush = CreateSolidBrush(RGB(255, 0, 0));
 }
 
-Drawer::Drawer(HWND hwnd, LOGFONT fontInfo) : m_hwnd(hwnd)
+Drawer::Drawer(HWND hwnd, LOGFONT fontInfo, RECT monitorRect) : m_hwnd(hwnd)
 {
-	RECT screenRect;
-	GetClientRect(m_hwnd, &screenRect);
+    RECT windowRect;
+    GetWindowRect(m_hwnd, &windowRect);
 
-	g_screenSize.cy = screenRect.bottom - screenRect.top;
-	g_screenSize.cx = screenRect.right - screenRect.left;
+    IntersectRect(&m_worldPaintRect, &monitorRect, &windowRect);
+
+    m_paintAreaSize.cx = m_worldPaintRect.right - m_worldPaintRect.left;
+	m_paintAreaSize.cy = m_worldPaintRect.bottom - m_worldPaintRect.top;
+
+    m_localDcPaintRect = { 0, 0, m_paintAreaSize.cx, m_paintAreaSize.cy };
+
+    LONG windowPaintLeft = m_worldPaintRect.left - windowRect.left;
+    LONG windowPaintTop = m_worldPaintRect.top - windowRect.top;
+    m_windowPaintRect = { windowPaintLeft, windowPaintTop, windowPaintLeft + m_paintAreaSize.cx, windowPaintTop + m_paintAreaSize.cy };
 
 	HDC hDc = GetDC(m_hwnd);
-	m_bitmap = CreateCompatibleBitmap(hDc, g_screenSize.cx, g_screenSize.cy);
-	m_dc = CreateCompatibleDC(hDc);
+	m_localBitmap = CreateCompatibleBitmap(hDc, m_paintAreaSize.cx, m_paintAreaSize.cy);
+	m_localDc = CreateCompatibleDC(hDc);
 	ReleaseDC(m_hwnd, hDc);
-	SelectObject(m_dc, m_bitmap);
+	SelectObject(m_localDc, m_localBitmap);
 
-	SetTextColor(m_dc, textColor);
-	SetBkMode(m_dc, TRANSPARENT);
+	SetTextColor(m_localDc, textColor);
+	SetBkMode(m_localDc, TRANSPARENT);
 
-	fontInfo.lfHeight = fontInfo.lfHeight * g_screenSize.cy / referenceHeight;
+	fontInfo.lfHeight = fontInfo.lfHeight * m_paintAreaSize.cy / referenceHeight;
 
 	m_font = CreateFontIndirect(&fontInfo);
-	SelectObject(m_dc, m_font);
+	SelectObject(m_localDc, m_font);
 }
 
 Drawer::~Drawer()
 {
-	ReleaseDC(m_hwnd, m_dc);
-	DeleteObject(m_dc);
-	DeleteObject(m_bitmap);
+	ReleaseDC(m_hwnd, m_localDc);
+	DeleteObject(m_localDc);
+	DeleteObject(m_localBitmap);
 	DeleteObject(m_font);
 }
 
-void Drawer::paint() const
+void Drawer::paint(HDC hdc) const
 {
-	PAINTSTRUCT ps;
-	HDC hdc = BeginPaint(m_hwnd, &ps);
-	BitBlt(hdc, 0, 0, g_screenSize.cx, g_screenSize.cy, m_dc, 0, 0, SRCCOPY);
-	EndPaint(m_hwnd, &ps);
+	BitBlt(hdc, m_windowPaintRect.left, m_windowPaintRect.top, m_paintAreaSize.cx, m_paintAreaSize.cy, m_localDc, 0, 0, SRCCOPY);
 }
 
 void Drawer::setText(const tstring& text)
 {
-	RECT screenRect;
-	GetClientRect(m_hwnd, &screenRect);
+	FillRect(m_localDc, &m_localDcPaintRect, backgroundBrush);
 
-	FillRect(m_dc, &screenRect, backgroundBrush);
-
-	{
+    {
 		auto quoteLength = static_cast<int>(text.length());
 		auto textFlags = DT_CENTER | DT_NOCLIP | DT_WORDBREAK | DT_EXTERNALLEADING;
 
-		auto textRect = screenRect;
-		DrawText(m_dc, text.c_str(), quoteLength, &textRect, textFlags | DT_CALCRECT);
+		auto textRect = m_localDcPaintRect;
+		DrawText(m_localDc, text.c_str(), quoteLength, &textRect, textFlags | DT_CALCRECT);
 
 		auto textWidth = textRect.right - textRect.left;
 		auto textHeight = textRect.bottom - textRect.top;
-		auto offsetX = (g_screenSize.cx - textWidth) / 2;
-		auto offsetY = (g_screenSize.cy - textHeight) / 2;
+		auto offsetX = (m_paintAreaSize.cx - textWidth) / 2;
+		auto offsetY = (m_paintAreaSize.cy - textHeight) / 2;
 		textRect.left += offsetX;
 		textRect.right += offsetX;
 		textRect.bottom += offsetY;
 		textRect.top += offsetY;
-		DrawText(m_dc, text.c_str(), quoteLength, &textRect, textFlags);
+
+		DrawText(m_localDc, text.c_str(), quoteLength, &textRect, textFlags);
 
 		if (m_debugDraw)
-			FrameRect(m_dc, &textRect, outlineBrush);
+			FrameRect(m_localDc, &textRect, outlineBrush);
 	}
 
-	InvalidateRect(m_hwnd, &screenRect, false);
+	InvalidateRect(m_hwnd, &m_windowPaintRect, false);
 }

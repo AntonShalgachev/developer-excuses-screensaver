@@ -11,6 +11,7 @@
 #define IDC_DEVELOPEREXCUSESSCREENSAVER 109
 #define IDC_TIMER_PERIOD_EDIT           1002
 #define IDC_CHOOSE_FONT                 1003
+#define IDC_CHECK_SEPARATE_QUOTE        1006
 #define DLG_SCRNSAVECONFIGURE           2003
 #define IDC_STATIC                      -1
 
@@ -21,7 +22,7 @@
 #define _APS_NO_MFC                     1
 #define _APS_NEXT_RESOURCE_VALUE        131
 #define _APS_NEXT_COMMAND_VALUE         32771
-#define _APS_NEXT_CONTROL_VALUE         1004
+#define _APS_NEXT_CONTROL_VALUE         1007
 #define _APS_NEXT_SYMED_VALUE           110
 #endif
 #endif

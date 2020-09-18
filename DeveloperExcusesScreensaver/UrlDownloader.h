@@ -8,9 +8,11 @@ class UrlDownloader : public IBindStatusCallback
 public:
 	using OnDataAvailableCallback = std::function<void(const tstring&)>;
 	using OnErrorCallback = std::function<void()>;
+    using OnDownloaderReady = std::function<void()>;
 
 	void download(const tstring& url, OnDataAvailableCallback&& onDataAvailable, OnErrorCallback&& onError);
 	bool isInProgress() const { return m_inProgress; }
+    void setOnDownloaderReadyCallback(OnDownloaderReady&& onDownloaderReady) { m_onDownloaderReady = onDownloaderReady; }
 
 	STDMETHOD(OnStartBinding)(DWORD, IBinding*) { return E_NOTIMPL; }
 	STDMETHOD(GetPriority)(LONG*) { return E_NOTIMPL; }
@@ -21,6 +23,8 @@ public:
 		if (FAILED(hresult))
 			onDownloadError();
 		m_inProgress = false;
+        if (m_onDownloaderReady)
+            m_onDownloaderReady();
 		return S_OK;
 	}
 
@@ -48,6 +52,7 @@ private:
 
 	OnDataAvailableCallback m_onDataAvailable;
 	OnErrorCallback m_onError;
+    OnDownloaderReady m_onDownloaderReady;
 	bool m_inProgress = false;
 };
 

@@ -11,8 +11,26 @@
 
 namespace
 {
+    struct MonitorRects
+    {
+        std::vector<RECT> rects;
+
+        static BOOL CALLBACK MonitorEnum(HMONITOR hMon, HDC hdc, LPRECT lprcMonitor, LPARAM pData)
+        {
+            auto pThis = reinterpret_cast<MonitorRects*>(pData);
+            pThis->rects.push_back(*lprcMonitor);
+            return TRUE;
+        }
+
+        MonitorRects()
+        {
+            EnumDisplayMonitors(0, 0, MonitorEnum, reinterpret_cast<LPARAM>(this));
+        }
+    };
+
 	std::unique_ptr<QuoteSource> quoteSource = nullptr;
-	std::unique_ptr<Drawer> drawer = nullptr;
+
+    std::vector<std::shared_ptr<Drawer>> drawers;
 
 	constexpr auto defaultUpdatePeriod = 7000;
 	constexpr auto defaultFontSize = 43;
@@ -22,13 +40,6 @@ namespace
 
 	constexpr bool debugTextDraw = false;
 	constexpr bool debugBehaveLikeWindow = false;
-
-	void fetchNewQuote()
-	{
-		quoteSource->fetchQuote([](const tstring& text) {
-			drawer->setText(text);
-		});
-	}
 
 	std::vector<unsigned char> serializeFontDescription(const LOGFONT& logFont)
 	{
@@ -65,7 +76,40 @@ namespace
 		return ConfigurationManager::Configuration{ defaultUpdatePeriod, getDefaultFontData() };
 	}
 
-	ConfigurationManager configManager{ getDefaultConfiguration() };
+    ConfigurationManager configManager{ getDefaultConfiguration() };
+
+    void fetchNewQuoteForAllDrawers()
+    {
+        quoteSource->fetchQuote([](const tstring& text) {
+            for (const auto& drawer : drawers)
+                drawer->setText(text);
+        });
+    }
+
+    void fetchNewQuoteForEachDrawer()
+    {
+        for (const auto& drawer : drawers)
+        {
+            quoteSource->fetchQuote([drawer](const tstring& text) {
+                drawer->setText(text);
+            });
+        }
+    }
+
+    void fetchNewQuote()
+    {
+        if (configManager.getConfiguration().separateQuote)
+            fetchNewQuoteForEachDrawer();
+        else
+            fetchNewQuoteForAllDrawers();
+    }
+
+    const std::vector<RECT>& getMonitorRects()
+    {
+        static const MonitorRects monitorRects;
+
+        return monitorRects.rects;
+    }
 }
 
 LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam)
@@ -89,23 +133,35 @@ LRESULT WINAPI ScreenSaverProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lP
 				SetWindowLong(hWnd, GWL_EXSTYLE, exStyle & ~WS_EX_TOOLWINDOW);
 			}
 
-			drawer = std::make_unique<Drawer>(hWnd, deserializeFontDescription(configManager.getConfiguration().fontData));
-			quoteSource = std::make_unique<QuoteSource>();
+            for (const auto& monitorRect : getMonitorRects())
+            {
+                auto drawer = std::make_shared<Drawer>(hWnd, deserializeFontDescription(configManager.getConfiguration().fontData), monitorRect);
+                drawer->setDebugDraw(debugTextDraw);
+                drawers.push_back(std::move(drawer));
+            }
 
-			drawer->setDebugDraw(debugTextDraw);
+			quoteSource = std::make_unique<QuoteSource>();
 
 			SetTimer(hWnd, updateTimerId, configManager.getConfiguration().timerPeriod, nullptr);
 			fetchNewQuote();
 
 			break;
 		case WM_DESTROY:
-			drawer = nullptr;
+            drawers.clear();
 			quoteSource = nullptr;
 			KillTimer(hWnd, updateTimerId);
 			break;
-		case WM_PAINT:
-			drawer->paint();
-			break;
+        case WM_PAINT:
+        {
+            PAINTSTRUCT ps;
+            HDC hdc = BeginPaint(hWnd, &ps);
+
+            for (const auto& drawer : drawers)
+                drawer->paint(hdc);
+
+            EndPaint(hWnd, &ps);
+            break;
+        }
 		case WM_TIMER:
 			if (wParam == updateTimerId)
 				fetchNewQuote();
@@ -136,6 +192,10 @@ BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, L
 			auto timerPeriodText = to_tstring(timerPeriod); // string is null-terminated in C++11
 			SetDlgItemText(hDlg, IDC_TIMER_PERIOD_EDIT, timerPeriodText.c_str());
 
+            auto separateQuote = configManager.getConfiguration().separateQuote;
+
+            SendMessage(GetDlgItem(hDlg, IDC_CHECK_SEPARATE_QUOTE), BM_SETCHECK, separateQuote ? BST_CHECKED : BST_UNCHECKED, 0);
+
 			return TRUE;
 		}
 		case WM_COMMAND:
@@ -150,7 +210,10 @@ BOOL WINAPI ScreenSaverConfigureDialog(HWND hDlg, UINT message, WPARAM wParam, L
 				GetWindowText(timerPeriodEdit, timerPeriodString.data(), static_cast<DWORD>(timerPeriodString.size()));
 				auto timerPeriod = StrToInt(timerPeriodString.data());
 
+                auto separateQuote = SendMessage(GetDlgItem(hDlg, IDC_CHECK_SEPARATE_QUOTE), BM_GETCHECK, NULL, NULL) == BST_CHECKED;
+
 				configManager.getConfiguration().timerPeriod = timerPeriod;
+                configManager.getConfiguration().separateQuote = separateQuote;
 				configManager.save();
 
 				EndDialog(hDlg, LOWORD(wParam));

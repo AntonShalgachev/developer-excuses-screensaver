@@ -13,6 +13,7 @@ namespace
 
 	const auto timerPeriodKey = std::string("timer_period");
 	const auto fontDataKey = std::string("font_data");
+	const auto separateQuoteKey = std::string("separate_quote");
 
 	struct SettingsPath
 	{
@@ -95,10 +96,12 @@ void ConfigurationManager::load()
 
 	auto timerPeriod = j[timerPeriodKey].get<int>();
 	auto fontData = decodeBase64(convert_to_tstring(j[fontDataKey].get<std::string>()));
+    auto separateQuote = j[separateQuoteKey].get<bool>();
 
 	m_config = Configuration{
 		timerPeriod,
 		fontData,
+        separateQuote,
 	};
 }
 
@@ -109,6 +112,7 @@ void ConfigurationManager::save() const
 	json j;
 	j[timerPeriodKey] = m_config.timerPeriod;
 	j[fontDataKey] = convert_to_string(fontDataEncoded);
+    j[separateQuoteKey] = m_config.separateQuote;
 
 	auto settingsPath = getSettingsPath();
 	auto res = SHCreateDirectory(NULL, settingsPath.directoryPath.c_str());

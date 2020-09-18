@@ -10,6 +10,7 @@ public:
 	public:
 		int timerPeriod = 0;
 		std::vector<unsigned char> fontData;
+        bool separateQuote = false;
 	};
 
 	ConfigurationManager(const Configuration& defaultConfig);

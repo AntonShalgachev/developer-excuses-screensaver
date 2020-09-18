@@ -9,7 +9,13 @@ public:
 	using OnDataAvailableCallback = std::function<void(tstring)>;
 	void fetchQuote(OnDataAvailableCallback&& onQuoteAvailable);
 
+    QuoteSource();
+
 private:
-	UrlDownloader m_downloader;
+    void processNextJob();
+
+    UrlDownloader m_downloader;
+
+    std::stack<OnDataAvailableCallback> m_jobs;
 };
 

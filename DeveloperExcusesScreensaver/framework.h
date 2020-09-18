@@ -23,3 +23,4 @@
 #include <sstream>
 #include <functional>
 #include <random>
+#include <stack>
