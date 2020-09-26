@@ -73,6 +73,14 @@ namespace
 
 		return SettingsPath{ directoryFullPath };
 	}
+
+	template<typename T>
+	T tryGetValue(const json& j, const T& defaultValue)
+	{
+		if (j.is_null())
+			return defaultValue;
+		return j.get<T>();
+	}
 }
 
 ConfigurationManager::ConfigurationManager(const Configuration& defaultConfig)
@@ -94,15 +102,13 @@ void ConfigurationManager::load()
 		ifs >> j;
 	}
 
-	auto timerPeriod = j[timerPeriodKey].get<int>();
-	auto fontData = decodeBase64(convert_to_tstring(j[fontDataKey].get<std::string>()));
-    auto separateQuote = j[separateQuoteKey].get<bool>();
+	m_config.timerPeriod = tryGetValue(j[timerPeriodKey], m_config.timerPeriod);
 
-	m_config = Configuration{
-		timerPeriod,
-		fontData,
-        separateQuote,
-	};
+	// TODO avoid encoding just to provide default value
+	std::string defaultFontData = convert_to_string(encodeBase64(m_config.fontData));
+	m_config.fontData = decodeBase64(convert_to_tstring(tryGetValue(j[fontDataKey], defaultFontData)));
+
+	m_config.separateQuote = tryGetValue(j[separateQuoteKey], m_config.separateQuote);
 }
 
 void ConfigurationManager::save() const
