@@ -35,6 +35,7 @@ namespace
 	constexpr auto defaultUpdatePeriod = 7000;
 	constexpr auto defaultFontSize = 43;
 	constexpr auto defaultFontName = TEXT("Courier New");
+	constexpr auto defaultSeparateQuote = true;
 
 	constexpr int updateTimerId = 1;
 
@@ -73,7 +74,7 @@ namespace
 
 	ConfigurationManager::Configuration getDefaultConfiguration()
 	{
-		return ConfigurationManager::Configuration{ defaultUpdatePeriod, getDefaultFontData() };
+		return ConfigurationManager::Configuration{ defaultUpdatePeriod, getDefaultFontData(), defaultSeparateQuote };
 	}
 
     ConfigurationManager configManager{ getDefaultConfiguration() };
